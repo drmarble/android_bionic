@@ -39,6 +39,10 @@ LOCAL_CPPFLAGS += \
 # We need to access Bionic private headers in the linker.
 LOCAL_CFLAGS += -I$(LOCAL_PATH)/../libc/
 
+ifeq ($(TARGET_ALLOW_NON_PIE_EXECUTABLES),true)
+	LOCAL_CFLAGS += -DTARGET_ALLOW_NON_PIE_EXECUTABLES
+endif
+
 # we don't want crtbegin.o (because we have begin.o), so unset it
 # just for this module
 LOCAL_NO_CRT := true
