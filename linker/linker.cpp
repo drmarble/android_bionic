@@ -479,7 +479,7 @@ static unsigned elfhash(const char* _name) {
   return h;
 }
 
-static ElfW(Sym)* soinfo_do_lookup(soinfo* si, const char* name, soinfo** lsi) {
+static ElfW(Sym)* __soinfo_do_lookup(soinfo* si, const char* name, soinfo** lsi, bool check_local) {
   unsigned elf_hash = elfhash(name);
   ElfW(Sym)* s = nullptr;
 
@@ -494,7 +494,7 @@ static ElfW(Sym)* soinfo_do_lookup(soinfo* si, const char* name, soinfo** lsi) {
    * Note that this is unlikely since static linker avoids generating
    * relocations for -Bsymbolic linked dynamic executables.
    */
-  if (si->has_DT_SYMBOLIC) {
+  if (check_local && si->has_DT_SYMBOLIC) {
     DEBUG("%s: looking up %s in local scope (DT_SYMBOLIC)", si->name, name);
     s = soinfo_elf_lookup(si, elf_hash, name);
     if (s != nullptr) {
@@ -504,7 +504,7 @@ static ElfW(Sym)* soinfo_do_lookup(soinfo* si, const char* name, soinfo** lsi) {
 
   if (s == nullptr && somain != nullptr) {
     // 1. Look for it in the main executable unless we already did.
-    if (si != somain || !si->has_DT_SYMBOLIC) {
+    if (check_local && (si != somain || !si->has_DT_SYMBOLIC)) {
       DEBUG("%s: looking up %s in executable %s",
             si->name, name, somain->name);
       s = soinfo_elf_lookup(somain, elf_hash, name);
@@ -535,7 +535,7 @@ static ElfW(Sym)* soinfo_do_lookup(soinfo* si, const char* name, soinfo** lsi) {
    * and some the first non-weak definition.   This is system dependent.
    * Here we return the first definition found for simplicity.  */
 
-  if (s == nullptr && !si->has_DT_SYMBOLIC) {
+  if (s == nullptr && check_local && !si->has_DT_SYMBOLIC) {
     DEBUG("%s: looking up %s in local scope", si->name, name);
     s = soinfo_elf_lookup(si, elf_hash, name);
     if (s != nullptr) {
@@ -564,6 +564,10 @@ static ElfW(Sym)* soinfo_do_lookup(soinfo* si, const char* name, soinfo** lsi) {
   }
 
   return s;
+}
+
+static ElfW(Sym)* soinfo_do_lookup(soinfo* si, const char* name, soinfo** lsi) {
+  return __soinfo_do_lookup(si, name, lsi, true);
 }
 
 // Each size has it's own allocator.
